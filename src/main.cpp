@@ -119,7 +119,7 @@ void setup()
     batteryADC_mv = batteryADC.readMiliVolts();
     batteryVoltage_mv = voltageCalibrationFactor * batteryADC_mv * 11;
     print("Battery voltage (before calibration): ");
-    println(batteryVoltage_mv);
+    println(batteryADC_mv * 11);
     if (voltageCalibrationFactor != 1.0) {
         print("Battery voltage (after calibration): ");
         println(voltageCalibrationFactor * batteryADC_mv * 11);
@@ -355,8 +355,8 @@ void loop()
                     targetRPM[i] = max(targetRPM[i] - static_cast<int32_t>((currentSpindownSpeed * loopTime_us) / 1000), idleRPM[i]);
 
                     if (targetRPM[i] == idleRPM[i]) {
-                        motorRPM[i] = targetRPM[i]; // setup the motorRPM to target
-                        PIDOutput[i] = 20;
+                        motorRPM[i] = targetRPM[i] + 1; // setup the motorRPM to target
+                        PIDOutput[i] = 40;
                     }
                 }
             }
