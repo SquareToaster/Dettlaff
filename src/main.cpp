@@ -369,7 +369,6 @@ void loop()
                     targetRPM[i] = max(targetRPM[i] - static_cast<int32_t>((currentSpindownSpeed * loopTime_us) / 1000), 0);
                 }
             }
-            resetFWControl();
             fromIdle = false;
         }
         break;
