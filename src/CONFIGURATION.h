@@ -4,23 +4,23 @@
 // Flywheel Settings
 // If variableFPS is true, the following settings are set on boot and locked. Otherwise, it always uses the first mode
 bool variableFPS = true;
-int32_t revRPMset[3][4] = { { 33000, 44000, 44000, 33000 }, { 33000, 44000, 44000, 33000 }, { 33000, 44000, 44000, 33000 } }; // adjust this to change fps, groups are firingMode 1, 2, 3, and the 4 elements in each group are individual motor RPM
-uint32_t idleTimeSet_ms[3] = { 4000, 4000, 4000 }; // how long to idle the flywheels for after releasing the trigger, in milliseconds
+int32_t revRPMset[3][4] = { { 28000, 28000, 28000, 28000 }, { 28000, 28000, 28000, 28000 }, { 28000, 28000, 28000, 28000 } }; // adjust this to change fps, groups are firingMode 1, 2, 3, and the 4 elements in each group are individual motor RPM
+uint32_t idleTimeSet_ms[3] = { 10000, 10000, 10000 }; // how long to idle the flywheels for after releasing the trigger, in milliseconds
 uint32_t firingDelaySet_ms[3] = { 50, 50, 50 }; // delay to allow flywheels to spin up before firing dart
 uint32_t firingDelayIdleSet_ms[3] = { 50, 50, 50 }; // delay to allow flywheels to spin up before firing dart when starting from idle state
 uint32_t spindownSpeed = 50; // RPM per ms
 
 int32_t motorKv = 3200; // critical for closed loop
-int32_t idleRPM[4] = { 500, 500, 500, 500 }; // rpm for flywheel idling, set this as low as possible where the wheels still spin reliably
+int32_t idleRPM[4] = { 0, 0, 0, 0 }; // rpm for flywheel idling, set this as low as possible where the wheels still spin reliably
 dshot_mode_t dshotMode = DSHOT300; // Options are DSHOT150, DSHOT300, DSHOT600, or DSHOT_OFF. DSHOT300 is recommended, DSHOT150 does not work with either AM32 ESCs or closed loop control, and DSHOT600 seems less reliable. DSHOT_OFF falls back to servo PWM. PWM is not working, probably a ESP32 timer resource conflict with the pusher PWM circuit
 bool brushedFlywheels = false; // solder a brushed motor flywheel cage to the ESC+ and Brushed Motor - pads
 
 // Closed Loop Settings
 flywheelControlType_t flywheelControl = TBH_CONTROL; // OPEN_LOOP_CONTROL, TWO_LEVEL_CONTROL, PID_CONTROL, or TBH_CONTROL
-const bool motors[4] = { true, true, true, true }; // which motors are hooked up // 1stR, 2ndR, 1stL, 2ndL
-bool timeOverrideWhenIdling = true; // while idling, fire the pusher after firingDelay_ms even before the flywheels are up to speed
+const bool motors[4] = { false, true, true, false }; // which motors are hooked up // 1stR, 2ndR, 1stL, 2ndL
+bool timeOverrideWhenIdling = false; // while idling, fire the pusher after firingDelay_ms even before the flywheels are up to speed
 int32_t fullThrottleRpmTolerance = 5000; // if rpm is more than this amount below target rpm, send full throttle. too high and rpm will undershoot, too low and it will overshoot
-int32_t firingRPMTolerance = 20000; // fire pusher when all flywheels are within this amount of target rpm. higher values will mean less pusher delay but potentially fire too early
+int32_t firingRPMTolerance = 300; // fire pusher when all flywheels are within this amount of target rpm. higher values will mean less pusher delay but potentially fire too early
 int32_t minFiringRPM = 10000; // overrides firingRPMTolerance for low rpm settings
 int32_t minFiringDelaySet_ms[3] = { 0, 0, 0 }; // when not idling, don't fire the pusher before this amount of time, even if wheels are up to speed. makes the delay more consistent
 int32_t minFiringDelayIdleSet_ms[3] = { 0, 0, 0 }; // same but when idling
@@ -49,14 +49,14 @@ uint32_t lowVoltageCutoff_mv = 3200 * 4; // default is 3200V per cell * 4 cells 
 float voltageCalibrationFactor = 1.0; // measure the battery voltage with a multimeter and divide that by the "Battery voltage before calibration" printed in the Serial Monitor, then put the result here
 
 // Input Pins, set to 0 if not using
-uint8_t triggerSwitchPin = 32; // main trigger pin
-uint8_t revSwitchPin = 23; // optional rev trigger
+uint8_t triggerSwitchPin = 23; // main trigger pin
+uint8_t revSwitchPin = 32; // optional rev trigger
 uint8_t cycleSwitchPin = 0; // pusher motor home switch
 uint8_t select0Pin = 33; // optional for select fire
 uint8_t select1Pin = 0; // optional for select fire
 uint8_t select2Pin = 25; // optional for select fire
 
-boards_t board = board_v0_8; // select the one that matches your board revision
+boards_t board = board_v0_11; // select the one that matches your board revision
 // Options:
 // board_v0_11
 // board_v0_10
@@ -80,9 +80,9 @@ uint32_t pusherVoltage_mv = 13000; // if battery voltage is above this voltage, 
 bool pusherReverseDirection = false; // make motor spin backwards? v0.5 & v0.6 (hBridgeDriver) need this to be false or the pusher logic is inverted? and the v0.2 - v0.4 at8870 pusher seems to need this to be true for reverse polarity braking to work?
 
 // Solenoid Settings
-uint16_t solenoidExtendTimeHigh_ms = 20; // set this to the high voltage min push time
+uint16_t solenoidExtendTimeHigh_ms = 25; // set this to the high voltage min push time
 uint32_t solenoidExtendTimeHighVoltage_mv = 16800; // set this to the voltage at which the solenoid still extends fully at the solenoidExtendTimeHigh_ms time (from log)
-uint16_t solenoidExtendTimeLow_ms = 35;
+uint16_t solenoidExtendTimeLow_ms = 40;
 uint32_t solenoidExtendTimeLowVoltage_mv = 11800; // set this to the voltage at which the solenoid still extends fully at the solenoidExtendTimeLow_ms time (from log)
 uint16_t solenoidRetractTime_ms = 35;
 
@@ -125,5 +125,4 @@ float KD = 0;
 // TBH Settings
 // for TBH PIDIntegral is used for TBH variable, and Gain is KI
 
-float KI = 0.05;
 float KI = 0.03;
