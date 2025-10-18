@@ -26,13 +26,13 @@ int32_t minFiringDelaySet_ms[3] = { 0, 0, 0 }; // when not idling, don't fire th
 int32_t minFiringDelayIdleSet_ms[3] = { 0, 0, 0 }; // same but when idling
 
 // PID Settings
-float KP = 1.2;
-// float KI = 0.1;
-float KD = 0;
+float PID_KP = 1.2;
+float PID_KI = 0.1;
+float PID_KD = 0;
 
 // TBH Settings
 // for TBH PIDIntegral is used for TBH variable, and Gain is KI
-float KI = 0.01; 
+float TBH_KI = 0.01;
 
 /* Setups:
 200fps plus motor spirit wheels: 28k RPM, TBH_CONTROL, and 0.03 KI

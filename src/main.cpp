@@ -569,7 +569,7 @@ void loop()
                 PIDError[i] = targetRPM[i] - motorRPM[i];
                 PIDIntegral[i] += PIDError[i] * loopTime_us / 1000000.0;
 
-                PIDOutput[i] = KP * PIDError[i] + KI * (PIDIntegral[i]) + KD * ((PIDError[i] - PIDErrorPrior[i]) * 1000000.0 / loopTime_us);
+                PIDOutput[i] = PID_KP * PIDError[i] + PID_KI * (PIDIntegral[i]) + PID_KD * ((PIDError[i] - PIDErrorPrior[i]) * 1000000.0 / loopTime_us);
 
                 throttleValue[i] = max(0, min(maxThrottle, static_cast<int32_t>(PIDOutput[i])));
 
@@ -582,11 +582,11 @@ void loop()
         for (int i = 0; i < 4; i++) {
             if (motors[i]) {
                 /*
-                so slightly confusing, but we use PIDIntegral for TBH variable, and KI for gain, and PIDOutput for our error accumulator, which we cap at 1999.
+                so slightly confusing, but we use PIDIntegral for TBH variable and PIDOutput for our error accumulator, which we cap at 1999.
                 Just trying to reuse variables to save runtime memory
                 */
                 PIDError[i] = targetRPM[i] - motorRPM[i];
-                PIDOutput[i] += KI * PIDError[i]; // reset PID output
+                PIDOutput[i] += TBH_KI * PIDError[i]; // reset PID output
                 if (PIDOutput[i] > 1999) {
                     PIDOutput[i] = 1999; // prevent negative output and cap output
                 } else if (PIDOutput[i] < 0) {
