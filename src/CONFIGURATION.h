@@ -74,6 +74,8 @@ uint8_t select2Pin = 0; // optional for select fire
 
 boards_t board = board_v0_11; // select the one that matches your board revision
 // Options:
+// board_v0_13
+// board_v0_12
 // board_v0_11
 // board_v0_10
 // board_v0_9
