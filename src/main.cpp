@@ -19,6 +19,8 @@ uint32_t lastRevTime_ms = 0; // for calculating idling
 uint32_t pusherTimer_ms = 0;
 int32_t revRPM[4]; // stores value from revRPMSet on boot for current firing mode
 int32_t idleTime_ms; // stores value from idleTimeSet_ms on boot for current firing mode
+int32_t fullSpeedIdleTime_ms; // stores value from fullSpeedIdleTimeSet_ms on boot for current firing mode
+uint32_t fullSpeedIdleStart_ms = 0; // stores start time of full speed idle
 int32_t targetRPM[4] = { 0, 0, 0, 0 }; // stores current target rpm
 int32_t firingRPM[4];
 int32_t throttleValue[4] = { 0, 0, 0, 0 }; // scale is 0 - 1999
@@ -92,27 +94,29 @@ uint32_t pusherCurrentCache[rpmLogLength + 1] = { 0 };
 uint16_t cacheIndex = rpmLogLength + 1;
 
 void WiFiInit();
+void printTime();
 void updateFiringMode();
 void resetFWControl();
 
 template <typename T>
 void println(T value)
 {
-    if (printTelemetry)
+    if (printDebug)
         Serial.println(value);
 }
 
 template <typename T>
 void print(T value)
 {
-    if (printTelemetry)
+    if (printDebug)
         Serial.print(value);
 }
 
 void setup()
 {
-    if (printTelemetry)
+    if (printDebug || printTelemetry) {
         Serial.begin(460800);
+    }
     println("Booting");
     batteryADC.attach(board.batteryADC);
     batteryADC_mv = batteryADC.readMiliVolts();
@@ -232,6 +236,7 @@ void setup()
         }
     }
     idleTime_ms = idleTimeSet_ms[fpsMode];
+    fullSpeedIdleTime_ms = fullSpeedIdleTimeSet_ms[fpsMode];
 
     if (board.flywheel) {
         pinMode(board.flywheel, OUTPUT);
@@ -289,7 +294,7 @@ void loop()
     //    println(telemBuffer);
 
     if (triggerSwitch.pressed() || (burstMode == BINARY && triggerSwitch.released() && time_ms < triggerTime_ms + binaryTriggerTimeout_ms)) { // pressed and released are transitions, isPressed is for state
-        print(time_ms);
+        printTime();
         if (triggerSwitch.pressed()) {
             print(" trigger pressed, burstMode ");
         } else if (burstMode == BINARY && triggerSwitch.released() && time_ms < triggerTime_ms + binaryTriggerTimeout_ms) {
@@ -402,7 +407,7 @@ void loop()
             && time_ms > lastRevTime_ms + (fromIdle ? firingDelayIdleSet_ms[fpsMode] : firingDelaySet_ms[fpsMode])) {
                 flywheelState = STATE_FULLSPEED;
                 fromIdle = true;
-                print(time_ms);
+                printTime();
                 println(" STATE_FULLSPEED transition, firingDelay time elapsed");
         }
         break;
@@ -410,10 +415,25 @@ void loop()
 
     case STATE_FULLSPEED:
         if (!revSwitch.isPressed() && shotsToFire == 0 && !firing) {
-            flywheelState = STATE_IDLE;
-            println("state transition: FULLSPEED to IDLE 1");
+            if (fullSpeedIdleTime_ms == 0) {
+                flywheelState = STATE_IDLE;
+                printTime();
+                println(" state transition: FULLSPEED to IDLE 1");
+            } else {
+                if (fullSpeedIdleStart_ms == 0) {
+                    fullSpeedIdleStart_ms = time_ms;
+                    printTime();
+                    println(" start full speed idle time");
+                } else if (time_ms > fullSpeedIdleStart_ms + fullSpeedIdleTime_ms) {
+                    fullSpeedIdleStart_ms = 0;
+                    flywheelState = STATE_IDLE;
+                    printTime();
+                    println(" state transition: FULLSPEED to IDLE after full speed idle");
+                }
+            }
         } else if (shotsToFire > 0 || firing) {
             lastRevTime_ms = time_ms;
+            fullSpeedIdleStart_ms = 0;
             switch (pusherType) {
 
             case PUSHER_MOTOR_CLOSEDLOOP:
@@ -422,11 +442,11 @@ void loop()
                     pusher->drive(100.0 * pusherVoltage_mv / batteryVoltage_mv, pusherReverseDirection); // drive function clamps the input so it's ok if it's over 100
                     firing = true;
                     pusherTimer_ms = time_ms;
-                    print(time_ms);
+                    printTime();
                     println(" pusher stroke starting");
                 } else if (firing && cycleSwitch.pressed()) { // when the pusher reaches rear position
                     shotsToFire = max(0, shotsToFire - 1);
-                    print(time_ms);
+                    printTime();
                     print(" pusher reached rear, shotsToFire reduced by 1, now ");
                     println(shotsToFire);
                     pusherTimer_ms = time_ms;
@@ -434,7 +454,7 @@ void loop()
                         if (pusherReversePolarityDuration_ms > 0) {
                             pusher->drive(100.0 * pusherReverseBrakingVoltage_mv / batteryVoltage_mv, !pusherReverseDirection); // drive motor backwards to stop faster
                             reverseBraking = true;
-                            print(time_ms);
+                            printTime();
                             println(" reverse braking started");
                             //                  firing = false; this doesn't work because this pusher control routine only runs when the flywheels are running, so this causes reverse braking to never end. refactor later?
                         } else {
@@ -462,7 +482,7 @@ void loop()
                         firing = true;
                         pusherTimer_ms = time_ms;
                         reverseBraking = false;
-                        print(time_ms);
+                        printTime();
                         println(" ending reverse braking, resuming firing");
                     } else if (cycleSwitch.released() && pusherEndReverseBrakingEarly) {
                         println("Cycle switch released during reverse braking");
@@ -479,13 +499,13 @@ void loop()
                         flywheelState = STATE_IDLE; // check later
                         println("state transition: FULLSPEED to IDLE 4");
                     } else if (time_ms > pusherTimer_ms + pusherReversePolarityDuration_ms) {
-                        print(time_ms);
+                        printTime();
                         println(" pusherReverse end of duration");
                         pusher->brake();
                         reverseBraking = false;
                         firing = false;
                         flywheelState = STATE_IDLE; // check later
-                        print(time_ms);
+                        printTime();
                         println(" state transition: FULLSPEED to IDLE 5");
                     }
                 } else if (!firing && cycleSwitch.released() && pusherReverseOnOverrun) {
@@ -508,12 +528,14 @@ void loop()
                     shotsToFire = max(0, shotsToFire - 1);
                     pusherTimer_ms = time_ms;
                     solenoidExtendTime_ms = batteryVoltage_mv * solenoidVoltageTimeSlope + solenoidVoltageTimeIntercept; // assumes  a linear relationship between voltage and solenoid extend time
-                    println("solenoid extending");
+                    printTime();
+                    println(" solenoid extending");
                 } else if (firing && time_ms > pusherTimer_ms + solenoidExtendTime_ms) { // retract solenoid
                     pusher->coast();
                     firing = false;
                     pusherTimer_ms = time_ms;
-                    println("solenoid retracting");
+                    printTime();
+                    println(" solenoid retracting");
                 }
                 break;
             case NO_PUSHER:
@@ -669,36 +691,36 @@ void loop()
                 // print the CSV header
                 for (int j = 0; j < 4; j++) {
                     if (motors[j]) {
-                        print("Motor ");
-                        print(j);
-                        print(",");
-                        print("TargetRPM ");
-                        print(j);
-                        print(",");
-                        print("Throttle ");
-                        print(j);
-                        print(",");
+                        Serial.print("Motor ");
+                        Serial.print(j);
+                        Serial.print(",");
+                        Serial.print("TargetRPM ");
+                        Serial.print(j);
+                        Serial.print(",");
+                        Serial.print("Throttle ");
+                        Serial.print(j);
+                        Serial.print(",");
                     }
                 }
-                print("batteryVoltage_mv, pusherCurrent_ma");
-                println("");
+                Serial.print("batteryVoltage_mv, pusherCurrent_ma");
+                Serial.println("");
 
                 // print the data
                 for (uint16_t i = 0; i < rpmLogLength; i++) {
                     for (int j = 0; j < 4; j++) {
                         if (motors[j]) {
-                            print(rpmCache[i][j]);
-                            print(",");
-                            print(targetRpmCache[i][j]);
-                            print(",");
-                            print(throttleCache[i][j]);
-                            print(",");
+                            Serial.print(rpmCache[i][j]);
+                            Serial.print(",");
+                            Serial.print(targetRpmCache[i][j]);
+                            Serial.print(",");
+                            Serial.print(throttleCache[i][j]);
+                            Serial.print(",");
                         }
                     }
-                    print(batteryVoltageCache[i]);
-                    print(",");
-                    print(pusherCurrentCache[i]);
-                    println("");
+                    Serial.print(batteryVoltageCache[i]);
+                    Serial.print(",");
+                    Serial.print(pusherCurrentCache[i]);
+                    Serial.println("");
                 }
                 // increment cache index to prevent re-dumping
                 cacheIndex++;
@@ -717,7 +739,7 @@ void loop()
         }
     }
     loopTime_us = micros() - loopStartTimer_us; // 'us' is microseconds
-    if (loopTime_us > targetLoopTime_us) {
+    if (loopTime_us > targetLoopTime_us + 128) {
         print("loop over time, ");
         println(loopTime_us);
     } else {
@@ -756,6 +778,20 @@ void updateFiringMode()
         firingMode = defaultFiringMode;
         return;
     }
+}
+
+void printTime()
+{
+    uint32_t s = time_ms / 1000;
+    uint32_t ms = time_ms % 1000;
+
+    Serial.print(s);
+    Serial.print('.');
+    if (ms < 100)
+        Serial.print('0');
+    if (ms < 10)
+        Serial.print('0');
+    Serial.print(ms);
 }
 
 void WiFiInit()
