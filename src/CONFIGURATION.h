@@ -3,7 +3,7 @@
 
 // Flywheel Settings
 // If variableFPS is true, the following settings are set on boot and locked. Otherwise, it always uses the first mode
-bool variableFPS = true;
+bool variableFPS = false;
 int32_t revRPMset[3][4] = { { 28000, 28000, 28000, 28000 }, { 17000, 17000, 17000, 17000 }, { 17000, 17000, 17000, 17000 } }; // adjust this to change fps, groups are firingMode 1, 2, 3, and the 4 elements in each group are individual motor RPM
 uint32_t idleTimeSet_ms[3] = { 10000, 10000, 10000 }; // how long to idle the flywheels for after releasing the trigger, in milliseconds
 uint32_t fullSpeedIdleTimeSet_ms[3] = { 200, 200, 200 };
@@ -41,7 +41,7 @@ float TBH_KI = 0.01;
 
 // Select Fire Settings
 uint32_t burstLengthSet[3] = { 5, 1, 1 };
-burstFireType_t burstModeSet[3] = { AUTO, BURST, BINARY };
+burstFireType_t burstModeSet[3] = { AUTO, BINARY, BURST };
 // burstMode AUTO = stops firing when trigger is released
 // burstMode BURST = always completes the burst
 // burstMode BINARY = fires one burst when you pull the trigger and another when you release the trigger
@@ -51,7 +51,7 @@ burstFireType_t burstModeSet[3] = { AUTO, BURST, BINARY };
 // for binary trigger I reccomend burstlength = 1
 // a very useful mode is full auto with a 5 dart limit to conserve ammo (burstMode AUTO, burstLength 5)
 
-uint32_t binaryTriggerTimeout_ms = 500; // if you hold the trigger for more than this amount of time, releasing the trigger will not fire a burst
+uint32_t binaryTriggerTimeout_ms = 200; // if you hold the trigger for more than this amount of time, releasing the trigger will not fire a burst
 
 selectFireType_t selectFireType = SWITCH_SELECT_FIRE; // pick NO_SELECT_FIRE, SWITCH_SELECT_FIRE, or BUTTON_SELECT_FIRE. NO_SELECT_FIRE uses the first value in each array for rpm and firing mode
 uint8_t defaultFiringMode = 1;
