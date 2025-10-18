@@ -54,7 +54,7 @@ burstFireType_t burstModeSet[3] = { AUTO, BURST, BINARY };
 uint32_t binaryTriggerTimeout_ms = 500; // if you hold the trigger for more than this amount of time, releasing the trigger will not fire a burst
 
 selectFireType_t selectFireType = SWITCH_SELECT_FIRE; // pick NO_SELECT_FIRE, SWITCH_SELECT_FIRE, or BUTTON_SELECT_FIRE. NO_SELECT_FIRE uses the first value in each array for rpm and firing mode
-uint8_t defaultFiringMode = 1; // only for SWITCH_SELECT_FIRE, what mode to select if no pins are connected
+uint8_t defaultFiringMode = 1;
 
 // Dettlaff Settings
 bool printTelemetry = false; // output telemetry over USB serial port for tuning. Enabling this turns on bidirectional dshot. Warning: printing motor RPM telemetry is blocking, so reseting the controller may be required between runs.

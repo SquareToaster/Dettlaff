@@ -27,7 +27,7 @@ int32_t throttleValue[4] = { 0, 0, 0, 0 }; // scale is 0 - 1999
 uint32_t currentSpindownSpeed = 0;
 uint16_t burstLength; // stores value from burstLengthSet for current firing mode
 burstFireType_t burstMode; // stores value from burstModeSet for current firing mode
-int8_t firingMode = 0; // current firing mode
+int8_t firingMode = defaultFiringMode; // current firing mode
 int8_t fpsMode = 0; // copy of firingMode locked at boot
 bool fromIdle;
 bidirectional_mode_e dshotBidirectional = NO_BIDIRECTION;
