@@ -3,21 +3,21 @@
 
 // Flywheel Settings
 // If variableFPS is true, the following settings are set on boot and locked. Otherwise, it always uses the first mode
-bool variableFPS = false;
-int32_t revRPMset[3][4] = { { 28000, 28000, 28000, 28000 }, { 17000, 17000, 17000, 17000 }, { 17000, 17000, 17000, 17000 } }; // adjust this to change fps, groups are firingMode 1, 2, 3, and the 4 elements in each group are individual motor RPM
-uint32_t idleTimeSet_ms[3] = { 10000, 10000, 10000 }; // how long to idle the flywheels for after releasing the trigger, in milliseconds
-uint32_t fullSpeedIdleTimeSet_ms[3] = { 200, 200, 200 };
-uint32_t firingDelaySet_ms[3] = { 150, 150, 150 }; // delay to allow flywheels to spin up before firing dart
-uint32_t firingDelayIdleSet_ms[3] = { 125, 125, 125 }; // delay to allow flywheels to spin up before firing dart when starting from idle state
+bool variableFPS = true;
+int32_t revRPMset[3][4] = { { 35000, 35000, 35000, 35000 }, { 23500, 23500, 23500, 23500 }, { 19000, 19000, 19000, 19000 } }; // adjust this to change fps, groups are firingMode 1, 2, 3, and the 4 elements in each group are individual motor RPM
+uint32_t idleTimeSet_ms[3] = { 20000, 10000, 5000 }; // how long to idle the flywheels for after releasing the trigger, in milliseconds
+uint32_t firingDelaySet_ms[3] = { 50, 50, 50 }; // delay to allow flywheels to spin up before firing dart
+uint32_t firingDelayIdleSet_ms[3] = { 50, 50, 50 }; // delay to allow flywheels to spin up before firing dart when starting from idle state
 uint32_t spindownSpeed = 50; // RPM per ms
 
-int32_t motorKv = 3200; // for TWO_LEVEL_CONTROL
-int32_t idleRPM[4] = { 500, 500, 500, 500 }; // rpm for flywheel idling, set this as low as possible where the wheels still spin reliably
+int32_t motorKv = 3200; // critical for closed loop
+int32_t idleRPM[4] = { 300, 300, 300, 300 }; // rpm for flywokay. heel idling, set this as low as possible where the wheels still spin reliably
 dshot_mode_t dshotMode = DSHOT300; // Options are DSHOT150, DSHOT300, DSHOT600, or DSHOT_OFF. DSHOT300 is recommended, DSHOT150 does not work with either AM32 ESCs or closed loop control, and DSHOT600 seems less reliable. DSHOT_OFF falls back to servo PWM. PWM is not working, probably a ESP32 timer resource conflict with the pusher PWM circuit
+bool brushedFlywheels = false; // solder a brushed motor flywheel cage to the ESC+ and Brushed Motor - pads
 
 // Closed Loop Settings
-flywheelControlType_t flywheelControl = TBH_CONTROL; // OPEN_LOOP_CONTROL, TWO_LEVEL_CONTROL, PID_CONTROL, or TBH_CONTROL
-const bool motors[4] = { false, true, false, true }; // which motors are hooked up
+flywheelControlType_t flywheelControl = OPEN_LOOP_CONTROL; // OPEN_LOOP_CONTROL, TWO_LEVEL_CONTROL, PID_CONTROL, or TBH_CONTROL
+const bool motors[4] = { true, true, true, true }; // which motors are hooked up // 1stR, 2ndR, 1stL, 2ndL
 bool timeOverrideWhenIdling = false; // while idling, fire the pusher after firingDelay_ms even before the flywheels are up to speed
 int32_t fullThrottleRpmTolerance = 5000; // if rpm is more than this amount below target rpm, send full throttle. too high and rpm will undershoot, too low and it will overshoot
 int32_t firingRPMTolerance = 300; // fire pusher when all flywheels are within this amount of target rpm. higher values will mean less pusher delay but potentially fire too early
@@ -25,57 +25,39 @@ int32_t minFiringRPM = 10000; // overrides firingRPMTolerance for low rpm settin
 int32_t minFiringDelaySet_ms[3] = { 0, 0, 0 }; // when not idling, don't fire the pusher before this amount of time, even if wheels are up to speed. makes the delay more consistent
 int32_t minFiringDelayIdleSet_ms[3] = { 0, 0, 0 }; // same but when idling
 
-// PID Settings
-float PID_KP = 1.2;
-float PID_KI = 0.1;
-float PID_KD = 0;
-
-// TBH Settings
-// for TBH PIDIntegral is used for TBH variable, and Gain is KI
-float TBH_KI = 0.01;
-
-/* Setups:
-200fps plus motor spirit wheels: 28k RPM, TBH_CONTROL, and 0.03 KI
-130fps plus motor spirit wheels: 17k RPM, TBH_CONTROL, and 0.01 KI
-*/
-
 // Select Fire Settings
-uint32_t burstLengthSet[3] = { 5, 1, 1 };
-burstFireType_t burstModeSet[3] = { AUTO, BINARY, BURST };
+uint32_t burstLengthSet[3] = { 100, 1, 1 };
+burstFireType_t burstModeSet[3] = { AUTO, BURST, BINARY };
 // burstMode AUTO = stops firing when trigger is released
 // burstMode BURST = always completes the burst
 // burstMode BINARY = fires one burst when you pull the trigger and another when you release the trigger
 // for full auto, set burstLength high (50+) and burstMode to AUTO
 // for semi auto, set burstLength to 1 and burstMode to BURST
-// for burst fire, set burstLength to whatever you prefer and burstMode to BURST
-// for binary trigger I reccomend burstlength = 1
-// a very useful mode is full auto with a 5 dart limit to conserve ammo (burstMode AUTO, burstLength 5)
+// for burst fire, set burstLength and burstMode to BURST
+// i find a very useful mode is full auto with a 5 dart limit (burstMode AUTO, burstLength 5)
 
-uint32_t binaryTriggerTimeout_ms = 200; // if you hold the trigger for more than this amount of time, releasing the trigger will not fire a burst
+uint32_t binaryTriggerTimeout_ms = 1000; // if you hold the trigger for more than this amount of time, releasing the trigger will not fire a burst
 
-selectFireType_t selectFireType = SWITCH_SELECT_FIRE; // pick NO_SELECT_FIRE, SWITCH_SELECT_FIRE, or BUTTON_SELECT_FIRE. NO_SELECT_FIRE uses the first value in each array for rpm and firing mode
-uint8_t defaultFiringMode = 1;
+selectFireType_t selectFireType = SWITCH_SELECT_FIRE; // pick NO_SELECT_FIRE, SWITCH_SELECT_FIRE, or BUTTON_SELECT_FIRE
+uint8_t defaultFiringMode = 1; // only for SWITCH_SELECT_FIRE, what mode to select if no pins are connected
 
 // Dettlaff Settings
-bool printTelemetry = false; // output telemetry over USB serial port for tuning. Enabling this turns on bidirectional dshot. Warning: printing motor RPM telemetry is blocking, so reseting the controller may be required between runs.
-bool printDebug = false; // output debug statements over USB serial
-const uint32_t rpmLogLength = 500; // how many values to log in telemetry buffer
-uint32_t lowVoltageCutoff_mv = 3400 * 4; // default is 3400mV per cell * 4 cells because the ESP32 voltage measurement is not very accurate
+bool printTelemetry = false;// output telemetry over USB serial port for tuning. Enabling this turns on bidirectional dshot. Warning: printing motor RPM telemetry is blocking, so reseting the controller may be required between runs.
+const uint32_t rpmLogLength = 1500; // how many values to log in telemetry bu
+uint32_t lowVoltageCutoff_mv = 3400 * 4; // default is 3200V per cell * 4 cells because the ESP32 voltage measurement is not very accurate
 // to protect your batteries, i reccomend doing the calibration below and then setting the cutoff to 3.2V to 3.4V per cell
 float voltageCalibrationFactor = 1.0; // measure the battery voltage with a multimeter and divide that by the "Battery voltage before calibration" printed in the Serial Monitor, then put the result here
 
 // Input Pins, set to 0 if not using
 uint8_t triggerSwitchPin = 32; // main trigger pin
-uint8_t revSwitchPin = 15; // optional rev trigger
+uint8_t revSwitchPin = 23; // optional rev trigger
 uint8_t cycleSwitchPin = 0; // pusher motor home switch
-uint8_t select0Pin = 0; // optional for select fire
+uint8_t select0Pin = 33; // optional for select fire
 uint8_t select1Pin = 0; // optional for select fire
-uint8_t select2Pin = 0; // optional for select fire
+uint8_t select2Pin = 25; // optional for select fire
 
 boards_t board = board_v0_11; // select the one that matches your board revision
 // Options:
-// board_v0_13
-// board_v0_12
 // board_v0_11
 // board_v0_10
 // board_v0_9
@@ -119,11 +101,10 @@ char AP_PW[32] = "Kellytime";
 
 // Advanced Settings
 uint16_t pusherStallTime_ms = 750; // for PUSHER_MOTOR_CLOSEDLOOP, how long do you run the motor without seeing an update on the cycle control switch before you decide the motor is stalled?
-bool brushedFlywheels = false; // only on older dettlaff versions. solder a brushed motor flywheel cage to the ESC+ and Brushed Motor - pads
 bool revSwitchNormallyClosed = false; // invert switch signal?
 bool triggerSwitchNormallyClosed = false;
 bool cycleSwitchNormallyClosed = false;
-uint16_t debounceTime_ms = 20; // decrease if you're unable to make fast double taps in semi auto, increase if you're getting accidental double taps in semi auto
+uint16_t debounceTime_ms = 100; // decrease if you're unable to make fast double taps in semi auto, increase if you're getting accidental double taps in semi auto
 uint16_t pusherDebounceTime_ms = 25;
 const int voltageAveragingWindow = 1;
 uint32_t pusherCurrentSmoothingFactor = 90;
@@ -135,3 +116,21 @@ uint16_t pwmFreq_hz = 20000;
 uint16_t servoFreq_hz = 200;
 bool pusherReverseOnOverrun = false; // don't use this, broken
 bool pusherEndReverseBrakingEarly = false; // don't use this, broken
+
+// PID Settings
+float KP = 1.2;
+// float KI = 0.1;
+float KD = 0;
+
+// TBH Settings
+// for TBH PIDIntegral is used for TBH variable, and Gain is KI
+
+float KI = 0.03;
+
+// Dettlaff Settings
+
+//Display specific settings
+#define DISPLAYOPTION 1 //multiple options for display layouts.  Set to 0, 1 or 2 and keep whichever you prefer.  Differences are cosmetic only.
+#define THINDISPLAY 0 //set to 1 if you have a thin display (128 x 32) or 0 if you have a tall display (128 x 64)
+bool hasDisplay = true;// If your blaster has a screen installed, set this to true
+bool rotateDisplay = false; // set to true if your display is installed upside down
