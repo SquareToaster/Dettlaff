@@ -131,6 +131,7 @@ float KI = 0.03;
 
 //Display specific settings
 #define DISPLAYOPTION 1 //multiple options for display layouts.  Set to 0, 1 or 2 and keep whichever you prefer.  Differences are cosmetic only.
-#define THINDISPLAY 0 //set to 1 if you have a thin display (128 x 32) or 0 if you have a tall display (128 x 64)
+#define THINDISPLAY 1 //set to 1 if you have a thin display (128 x 32) or 0 if you have a tall display (128 x 64)
+#define ANIMATIONSPEED 60 // sets the speed of the dart animation.  lower number is faster animation.  Default value is 75
 bool hasDisplay = true;// If your blaster has a screen installed, set this to true
 bool rotateDisplay = false; // set to true if your display is installed upside down

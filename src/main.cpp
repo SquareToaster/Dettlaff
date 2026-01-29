@@ -151,10 +151,93 @@ void print(T value)
 
 void loop2(void * pvParameters){  //loop code that runs on second core and handles display functions only
     while(1){
-    delay(75);
+    delay(ANIMATIONSPEED);
     display.clearDisplay();
     if(thinDisplay){  //thin display configuration
+        switch (displayOption){
+            case 0:  //case 0 lists the three values left justified on separate rows
+                display.setCursor(0,0);
+                display.print(batteryVoltage_mv/1000);
+                display.print(".");
+                display.print((batteryVoltage_mv - (batteryVoltage_mv/1000)*1000)/100);
+                display.print (" V");
+                display.setCursor(0,12);
+                switch (burstMode){
+                    case AUTO:
+                        display.print("AUTO");
+                        break;
+                    case BURST:
+                        display.print("SEMI");
+                        break;
+                    case BINARY:
+                        display.print("BINARY");
+                        break;
+        
+                }
+                display.setCursor(0,24);
+                display.print(revRPM[0]/1000);  //pull RPM setting from first motor
+                display.print(".");
+                display.print((revRPM[0]-(revRPM[0]/1000)*1000)/100);
+                display.print("K RPM");
+    
+            break;
 
+            case 1:  //case 1 displays all 3 values across the top with skinnytext and shows dart animation
+                display.setCursor(0,0);
+                switch (burstMode){
+                    case AUTO:
+                        display.print("AUTO");
+
+                        break;
+                    case BURST:
+                        display.print("SEMI");
+
+                        break;
+                    case BINARY:
+                        display.print("BINARY");
+
+                        break;
+        
+                } 
+                display.setCursor(92,0);
+                display.print(batteryVoltage_mv/1000);
+                display.print(".");
+                display.print((batteryVoltage_mv - (batteryVoltage_mv/1000)*1000)/100);
+                display.print (" V");
+                display.setCursor(44,0);
+                display.print(revRPM[0]/1000);
+                display.print(".");
+                display.print((revRPM[0]-(revRPM[0]/1000)*1000)/100);
+                display.print("K");
+                for (int i = 0; i < 8; i++){
+                    if(burstMode == AUTO  ||  (burstMode == BURST && i % 4 == 0) || (burstMode == BINARY && (i & 0x2) == 0)){  // decides how many of 8 darts to render depending on mode
+                        dartXPos[i] = -2*(1+i)*DARTWIDTH+((SCREEN_WIDTH+DARTWIDTH*16)/FRAMES)*frameCount;
+                        if (dartXPos[i] > -1*DARTWIDTH && dartXPos[i] < SCREEN_WIDTH){  //only draw darts that are on screen
+                            display.fillRect(dartXPos[i],dartYPos[i],DARTWIDTH,DARTHEIGHT,WHITE);  //draw dart body
+                            display.drawRect(dartXPos[i]+DARTWIDTH,dartYPos[i]+1,TIPWIDTH,DARTHEIGHT-2,WHITE);  //draw dart tip
+                        }
+                            
+                    }
+                    
+                }
+
+                
+                if(frameCount == FRAMES+1){
+                    frameCount = 0;
+                    for(int i=0; i<8; i++){
+                        dartYPos[i] = 10 + rand() % 17;
+                    }
+
+                } else {
+                    frameCount++;
+                }
+            break;
+            
+            case 2:
+                displayOption = 1;
+            break;
+
+        }
     }
     
     else{  //tall display options
@@ -179,7 +262,7 @@ void loop2(void * pvParameters){  //loop code that runs on second core and handl
         
                 }
                 display.setCursor(0,40);
-                display.print(revRPM[0]/1000);
+                display.print(revRPM[0]/1000);  //pull RPM setting from first motor
                 display.print(".");
                 display.print((revRPM[0]-(revRPM[0]/1000)*1000)/100);
                 display.print("K RPM");
@@ -300,10 +383,10 @@ void setup()
             delay(100);
         }
         display.clearDisplay();
-        if(!thinDisplay && (displayOption == 1 || displayOption == 2)){
-            display.setTextSize(1);
-        } else {
+        if(!thinDisplay && displayOption == 0){
             display.setTextSize(2);
+        } else {
+            display.setTextSize(1);
         }
         
         display.setTextColor(SSD1306_WHITE);
