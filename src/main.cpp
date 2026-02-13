@@ -12,41 +12,41 @@
 #include <ESP32AnalogRead.h>
 #include <esp_wifi.h>
 
-#include <wire.h>
-#include <Adafruit_SSD1306.h>
 #include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <wire.h>
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #if !THINDISPLAY && DISPLAYOPTION == 1
-    #define SCREEN_HEIGHT 32 // OLED display height, in pixels - This case defines a 64 line height display as 32 lines.  This allows skinny/tall text, but only  uses every other line of the display to accomplish this
+#define SCREEN_HEIGHT 32 // OLED display height, in pixels - This case defines a 64 line height display as 32 lines.  This allows skinny/tall text, but only  uses every other line of the display to accomplish this
 
-    uint8_t displayOption = DISPLAYOPTION; 
-    bool thinDisplay = false;
+uint8_t displayOption = DISPLAYOPTION;
+bool thinDisplay = false;
 #elif !THINDISPLAY && DISPLAYOPTION == 0
-    #define SCREEN_HEIGHT 64 // OLED display height, in pixels
-    uint8_t displayOption = DISPLAYOPTION; 
-    bool thinDisplay = false;
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+uint8_t displayOption = DISPLAYOPTION;
+bool thinDisplay = false;
 #elif !THINDISPLAY && DISPLAYOPTION == 2
-    #define SCREEN_HEIGHT 64 // OLED display height, in pixels
-    uint8_t displayOption = DISPLAYOPTION; 
-    bool thinDisplay = false;
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+uint8_t displayOption = DISPLAYOPTION;
+bool thinDisplay = false;
 #else
-    #define SCREEN_HEIGHT 32 // OLED display height, in pixels
-    uint8_t displayOption = DISPLAYOPTION; 
-    bool thinDisplay = true;
+#define SCREEN_HEIGHT 32 // OLED display height, in pixels
+uint8_t displayOption = DISPLAYOPTION;
+bool thinDisplay = true;
 #endif
-#define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3C 
-#define DARTWIDTH 16  //Used to define dart graphic
-#define DARTHEIGHT 6 //Used to define dart graphic
-#define TIPWIDTH 5 //Used to define dart graphic
-#define FRAMES 48  //Define number of frames or steps in the dart animation
+#define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3C
+#define DARTWIDTH 16 // Used to define dart graphic
+#define DARTHEIGHT 6 // Used to define dart graphic
+#define TIPWIDTH 5 // Used to define dart graphic
+#define FRAMES 48 // Define number of frames or steps in the dart animation
 uint16_t frameCount = 0; // counter to track which frame out of total FRAMES is currently being displayed
-uint16_t dartYPos[8] = {9,13,17,21,23,9,11,13};
-int16_t dartXPos[8] = {0,0,0,0,0,0,0,0};
+uint16_t dartYPos[8] = { 9, 13, 17, 21, 23, 9, 11, 13 };
+int16_t dartXPos[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 uint8_t numDarts = 1;
 TaskHandle_t updateDisplay;
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
-
+uint32_t RPMSetting;
 
 uint32_t loopStartTimer_us = micros();
 int32_t loopTime_us = targetLoopTime_us;
@@ -127,12 +127,9 @@ uint32_t batteryVoltageCache[rpmLogLength + 1] = { 0 };
 uint32_t pusherCurrentCache[rpmLogLength + 1] = { 0 };
 uint16_t cacheIndex = rpmLogLength + 1;
 
-
-
 void WiFiInit();
 void updateFiringMode();
 void resetFWControl();
-
 
 template <typename T>
 void println(T value)
@@ -148,249 +145,234 @@ void print(T value)
         Serial.print(value);
 }
 
-
-void loop2(void * pvParameters){  //loop code that runs on second core and handles display functions only
-    while(1){
-    delay(ANIMATIONSPEED);
-    display.clearDisplay();
-    if(thinDisplay){  //thin display configuration
-        switch (displayOption){
-            case 0:  //case 0 lists the three values left justified on separate rows
-                display.setCursor(0,0);
-                display.print(batteryVoltage_mv/1000);
+void loop2(void* pvParameters)
+{ // loop code that runs on second core and handles display functions only
+    while (1) {
+        delay(ANIMATIONSPEED);
+        display.clearDisplay();
+        if (thinDisplay) { // thin display configuration
+            switch (displayOption) {
+            case 0: // case 0 lists the three values left justified on separate rows
+                display.setCursor(0, 0);
+                display.print(batteryVoltage_mv / 1000);
                 display.print(".");
-                display.print((batteryVoltage_mv - (batteryVoltage_mv/1000)*1000)/100);
-                display.print (" V");
-                display.setCursor(0,12);
-                switch (burstMode){
-                    case AUTO:
-                        display.print("AUTO");
-                        break;
-                    case BURST:
-                        display.print("SEMI");
-                        break;
-                    case BINARY:
-                        display.print("BINARY");
-                        break;
-        
+                display.print((batteryVoltage_mv - (batteryVoltage_mv / 1000) * 1000) / 100);
+                display.print(" V");
+                display.setCursor(0, 12);
+                switch (burstMode) {
+                case AUTO:
+                    display.print("AUTO");
+                    break;
+                case BURST:
+                    display.print("SEMI");
+                    break;
+                case BINARY:
+                    display.print("BINARY");
+                    break;
                 }
-                display.setCursor(0,24);
-                display.print(revRPM[0]/1000);  //pull RPM setting from first motor
+                display.setCursor(0, 24);
+                display.print(RPMSetting / 1000); // pull RPM setting from first motor
                 display.print(".");
-                display.print((revRPM[0]-(revRPM[0]/1000)*1000)/100);
+                display.print((RPMSetting - (RPMSetting / 1000) * 1000) / 100);
                 display.print("K RPM");
-    
-            break;
 
-            case 1:  //case 1 displays all 3 values across the top with skinnytext and shows dart animation
-                display.setCursor(0,0);
-                switch (burstMode){
-                    case AUTO:
-                        display.print("AUTO");
+                break;
 
-                        break;
-                    case BURST:
-                        display.print("SEMI");
+            case 1: // case 1 displays all 3 values across the top with skinnytext and shows dart animation
+                display.setCursor(0, 0);
+                switch (burstMode) {
+                case AUTO:
+                    display.print("AUTO");
 
-                        break;
-                    case BINARY:
-                        display.print("BINARY");
+                    break;
+                case BURST:
+                    display.print("SEMI");
 
-                        break;
-        
-                } 
-                display.setCursor(92,0);
-                display.print(batteryVoltage_mv/1000);
+                    break;
+                case BINARY:
+                    display.print("BINARY");
+
+                    break;
+                }
+                display.setCursor(92, 0);
+                display.print(batteryVoltage_mv / 1000);
                 display.print(".");
-                display.print((batteryVoltage_mv - (batteryVoltage_mv/1000)*1000)/100);
-                display.print (" V");
-                display.setCursor(44,0);
-                display.print(revRPM[0]/1000);
+                display.print((batteryVoltage_mv - (batteryVoltage_mv / 1000) * 1000) / 100);
+                display.print(" V");
+                display.setCursor(44, 0);
+                display.print(RPMSetting / 1000);
                 display.print(".");
-                display.print((revRPM[0]-(revRPM[0]/1000)*1000)/100);
+                display.print((RPMSetting - (RPMSetting / 1000) * 1000) / 100);
                 display.print("K");
-                for (int i = 0; i < 8; i++){
-                    if(burstMode == AUTO  ||  (burstMode == BURST && i % 4 == 0) || (burstMode == BINARY && (i & 0x2) == 0)){  // decides how many of 8 darts to render depending on mode
-                        dartXPos[i] = -2*(1+i)*DARTWIDTH+((SCREEN_WIDTH+DARTWIDTH*16)/FRAMES)*frameCount;
-                        if (dartXPos[i] > -1*DARTWIDTH && dartXPos[i] < SCREEN_WIDTH){  //only draw darts that are on screen
-                            display.fillRect(dartXPos[i],dartYPos[i],DARTWIDTH,DARTHEIGHT,WHITE);  //draw dart body
-                            display.drawRect(dartXPos[i]+DARTWIDTH,dartYPos[i]+1,TIPWIDTH,DARTHEIGHT-2,WHITE);  //draw dart tip
+                for (int i = 0; i < 8; i++) {
+                    if (burstMode == AUTO || (burstMode == BURST && i % 4 == 0) || (burstMode == BINARY && (i & 0x2) == 0)) { // decides how many of 8 darts to render depending on mode
+                        dartXPos[i] = -2 * (1 + i) * DARTWIDTH + ((SCREEN_WIDTH + DARTWIDTH * 16) / FRAMES) * frameCount;
+                        if (dartXPos[i] > -1 * DARTWIDTH && dartXPos[i] < SCREEN_WIDTH) { // only draw darts that are on screen
+                            display.fillRect(dartXPos[i], dartYPos[i], DARTWIDTH, DARTHEIGHT, WHITE); // draw dart body
+                            display.drawRect(dartXPos[i] + DARTWIDTH, dartYPos[i] + 1, TIPWIDTH, DARTHEIGHT - 2, WHITE); // draw dart tip
                         }
-                            
                     }
-                    
                 }
 
-                
-                if(frameCount == FRAMES+1){
+                if (frameCount == FRAMES + 1) {
                     frameCount = 0;
-                    for(int i=0; i<8; i++){
+                    for (int i = 0; i < 8; i++) {
                         dartYPos[i] = 10 + rand() % 17;
                     }
 
                 } else {
                     frameCount++;
                 }
-            break;
-            
+                break;
+
             case 2:
                 displayOption = 1;
-            break;
-
-        }
-    }
-    
-    else{  //tall display options
-        switch (displayOption){
-            case 0:  //case 0 lists the three values left justified on separate rows
-                display.setCursor(0,0);
-                display.print(batteryVoltage_mv/1000);
-                display.print(".");
-                display.print((batteryVoltage_mv - (batteryVoltage_mv/1000)*1000)/100);
-                display.print (" V");
-                display.setCursor(0,20);
-                switch (burstMode){
-                    case AUTO:
-                        display.print("AUTO");
-                        break;
-                    case BURST:
-                        display.print("SEMI");
-                        break;
-                    case BINARY:
-                        display.print("BINARY");
-                        break;
-        
-                }
-                display.setCursor(0,40);
-                display.print(revRPM[0]/1000);  //pull RPM setting from first motor
-                display.print(".");
-                display.print((revRPM[0]-(revRPM[0]/1000)*1000)/100);
-                display.print("K RPM");
-      
                 break;
-            case 1:  //case 1 displays all 3 values across the top with skinnytext and shows dart animation
-                display.setCursor(0,0);
-                switch (burstMode){
-                    case AUTO:
-                        display.print("AUTO");
-
-                        break;
-                    case BURST:
-                        display.print("SEMI");
-
-                        break;
-                    case BINARY:
-                        display.print("BINARY");
-
-                        break;
-        
-                } 
-                display.setCursor(92,0);
-                display.print(batteryVoltage_mv/1000);
-                display.print(".");
-                display.print((batteryVoltage_mv - (batteryVoltage_mv/1000)*1000)/100);
-                display.print (" V");
-                display.setCursor(44,0);
-                display.print(revRPM[0]/1000);
-                display.print(".");
-                display.print((revRPM[0]-(revRPM[0]/1000)*1000)/100);
-                display.print("K");
-                for (int i = 0; i < 8; i++){
-                    if(burstMode == AUTO  ||  (burstMode == BURST && i % 4 == 0) || (burstMode == BINARY && (i & 0x2) == 0)){  // decides how many of 8 darts to render depending on mode
-                        dartXPos[i] = -2*(1+i)*DARTWIDTH+((SCREEN_WIDTH+DARTWIDTH*16)/FRAMES)*frameCount;
-                        if (dartXPos[i] > -1*DARTWIDTH && dartXPos[i] < SCREEN_WIDTH){  //only draw darts that are on screen
-                            display.fillRect(dartXPos[i],dartYPos[i],DARTWIDTH,DARTHEIGHT,WHITE);  //draw dart body
-                            display.drawRect(dartXPos[i]+DARTWIDTH,dartYPos[i]+1,TIPWIDTH,DARTHEIGHT-2,WHITE);  //draw dart tip
-                        }
-                            
-                    }
-                    
-                }
-
-                
-                if(frameCount == FRAMES+1){
-                    frameCount = 0;
-                    for(int i=0; i<8; i++){
-                        dartYPos[i] = 8 + rand() % 18;
-                    }
-
-                } else {
-                    frameCount++;
-                }
-            break;
-            case 2:  //case 2 displays all 3 values across the top with small text and shows dart animation
-                display.setCursor(0,4);
-                switch (burstMode){
-                    case AUTO:
-                        display.print("AUTO");
-
-                        break;
-                    case BURST:
-                        display.print("SEMI");
-
-                        break;
-                    case BINARY:
-                        display.print("BINARY");
-
-                        break;
-        
-                } 
-                display.setCursor(92,4);
-                display.print(batteryVoltage_mv/1000);
-                display.print(".");
-                display.print((batteryVoltage_mv - (batteryVoltage_mv/1000)*1000)/100);
-                display.print (" V");
-                display.setCursor(44,4);
-                display.print(revRPM[0]/1000);
-                display.print(".");
-                display.print((revRPM[0]-(revRPM[0]/1000)*1000)/100);
-                display.print("K");
-                for (int i = 0; i < 8; i++){
-                    if(burstMode == AUTO  ||  (burstMode == BURST && i % 4 == 0) || (burstMode == BINARY && (i & 0x2) == 0)){  // decides how many of 8 darts to render depending on mode
-                        dartXPos[i] = -2*(1+i)*DARTWIDTH+((SCREEN_WIDTH+DARTWIDTH*16)/FRAMES)*frameCount;
-                        if (dartXPos[i] > -1*DARTWIDTH && dartXPos[i] < SCREEN_WIDTH){  //only draw darts that are on screen
-                            display.fillRect(dartXPos[i],2*dartYPos[i],DARTWIDTH,2*DARTHEIGHT-2,WHITE);  //draw dart body
-                            display.drawRect(dartXPos[i]+DARTWIDTH,(2*dartYPos[i])+1,TIPWIDTH,(2*DARTHEIGHT)-4,WHITE);  //draw dart tip
-                        }
-                            
-                    }
-                    
-                }
-
-                
-                if(frameCount == FRAMES+1){
-                    frameCount = 0;
-                    for(int i=0; i<8; i++){
-                        dartYPos[i] = 8 + rand() % 18;
-                    }
-
-                } else {
-                    frameCount++;
-                }
-            break;
+            }
         }
-             
+
+        else { // tall display options
+            switch (displayOption) {
+            case 0: // case 0 lists the three values left justified on separate rows
+                display.setCursor(0, 0);
+                display.print(batteryVoltage_mv / 1000);
+                display.print(".");
+                display.print((batteryVoltage_mv - (batteryVoltage_mv / 1000) * 1000) / 100);
+                display.print(" V");
+                display.setCursor(0, 20);
+                switch (burstMode) {
+                case AUTO:
+                    display.print("AUTO");
+                    break;
+                case BURST:
+                    display.print("SEMI");
+                    break;
+                case BINARY:
+                    display.print("BINARY");
+                    break;
+                }
+                display.setCursor(0, 40);
+                display.print(RPMSetting / 1000); // pull RPM setting from first motor
+                display.print(".");
+                display.print((RPMSetting - (RPMSetting / 1000) * 1000) / 100);
+                display.print("K RPM");
+
+                break;
+            case 1: // case 1 displays all 3 values across the top with skinnytext and shows dart animation
+                display.setCursor(0, 0);
+                switch (burstMode) {
+                case AUTO:
+                    display.print("AUTO");
+
+                    break;
+                case BURST:
+                    display.print("SEMI");
+
+                    break;
+                case BINARY:
+                    display.print("BINARY");
+
+                    break;
+                }
+                display.setCursor(92, 0);
+                display.print(batteryVoltage_mv / 1000);
+                display.print(".");
+                display.print((batteryVoltage_mv - (batteryVoltage_mv / 1000) * 1000) / 100);
+                display.print(" V");
+                display.setCursor(44, 0);
+                display.print(RPMSetting / 1000);
+                display.print(".");
+                display.print((RPMSetting - (RPMSetting / 1000) * 1000) / 100);
+                display.print("K");
+                for (int i = 0; i < 8; i++) {
+                    if (burstMode == AUTO || (burstMode == BURST && i % 4 == 0) || (burstMode == BINARY && (i & 0x2) == 0)) { // decides how many of 8 darts to render depending on mode
+                        dartXPos[i] = -2 * (1 + i) * DARTWIDTH + ((SCREEN_WIDTH + DARTWIDTH * 16) / FRAMES) * frameCount;
+                        if (dartXPos[i] > -1 * DARTWIDTH && dartXPos[i] < SCREEN_WIDTH) { // only draw darts that are on screen
+                            display.fillRect(dartXPos[i], dartYPos[i], DARTWIDTH, DARTHEIGHT, WHITE); // draw dart body
+                            display.drawRect(dartXPos[i] + DARTWIDTH, dartYPos[i] + 1, TIPWIDTH, DARTHEIGHT - 2, WHITE); // draw dart tip
+                        }
+                    }
+                }
+
+                if (frameCount == FRAMES + 1) {
+                    frameCount = 0;
+                    for (int i = 0; i < 8; i++) {
+                        dartYPos[i] = 8 + rand() % 18;
+                    }
+
+                } else {
+                    frameCount++;
+                }
+                break;
+            case 2: // case 2 displays all 3 values across the top with small text and shows dart animation
+                display.setCursor(0, 4);
+                switch (burstMode) {
+                case AUTO:
+                    display.print("AUTO");
+
+                    break;
+                case BURST:
+                    display.print("SEMI");
+
+                    break;
+                case BINARY:
+                    display.print("BINARY");
+
+                    break;
+                }
+                display.setCursor(92, 4);
+                display.print(batteryVoltage_mv / 1000);
+                display.print(".");
+                display.print((batteryVoltage_mv - (batteryVoltage_mv / 1000) * 1000) / 100);
+                display.print(" V");
+                display.setCursor(44, 4);
+                display.print(RPMSetting / 1000);
+                display.print(".");
+                display.print((RPMSetting - (RPMSetting / 1000) * 1000) / 100);
+                display.print("K");
+                for (int i = 0; i < 8; i++) {
+                    if (burstMode == AUTO || (burstMode == BURST && i % 4 == 0) || (burstMode == BINARY && (i & 0x2) == 0)) { // decides how many of 8 darts to render depending on mode
+                        dartXPos[i] = -2 * (1 + i) * DARTWIDTH + ((SCREEN_WIDTH + DARTWIDTH * 16) / FRAMES) * frameCount;
+                        if (dartXPos[i] > -1 * DARTWIDTH && dartXPos[i] < SCREEN_WIDTH) { // only draw darts that are on screen
+                            display.fillRect(dartXPos[i], 2 * dartYPos[i], DARTWIDTH, 2 * DARTHEIGHT - 2, WHITE); // draw dart body
+                            display.drawRect(dartXPos[i] + DARTWIDTH, (2 * dartYPos[i]) + 1, TIPWIDTH, (2 * DARTHEIGHT) - 4, WHITE); // draw dart tip
+                        }
+                    }
+                }
+
+                if (frameCount == FRAMES + 1) {
+                    frameCount = 0;
+                    for (int i = 0; i < 8; i++) {
+                        dartYPos[i] = 8 + rand() % 18;
+                    }
+
+                } else {
+                    frameCount++;
+                }
+                break;
+            }
+        }
+        display.display();
     }
-    display.display();
-}
 }
 
 void setup()
 {
-
+    
     if (hasDisplay) {
+        
         while (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
             delay(100);
         }
         display.clearDisplay();
-        if(!thinDisplay && displayOption == 0){
+        if (!thinDisplay && displayOption == 0) {
             display.setTextSize(2);
         } else {
             display.setTextSize(1);
         }
-        
+
         display.setTextColor(SSD1306_WHITE);
-        if (rotateDisplay){
+        if (rotateDisplay) {
             display.setRotation(2);
         } else {
             display.setRotation(0);
@@ -402,10 +384,9 @@ void setup()
             NULL,
             1,
             &updateDisplay,
-            0
-        );
+            0);
         delay(500);
-    } 
+    }
 
     if (printTelemetry)
         Serial.begin(460800);
@@ -559,18 +540,13 @@ void setup()
     if (wifiDuration_ms > 0) {
         WiFiInit();
     }
-
-
-
+    RPMSetting = max(max(revRPM[0], revRPM[1]),max(revRPM[2],revRPM[3]));  //take the largest RPM setting of all 4 (in case unused motors are set to 0) - only matters for display
 }
-
 
 void loop()
 {
     loopStartTimer_us = micros();
     time_ms = millis();
-
-
 
     if (revSwitchPin) {
         revSwitch.update();
@@ -1148,4 +1124,3 @@ void resetFWControl()
     }
     return;
 }
-
